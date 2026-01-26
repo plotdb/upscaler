@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Upscaler - CDN 版本</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 800px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .upload-area {
+      border: 3px dashed #ddd;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 30px;
+      background: #fafafa;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+
+    .upload-area:hover {
+      border-color: #667eea;
+      background: #f0f0ff;
+    }
+
+    .upload-area.drag-over {
+      border-color: #667eea;
+      background: #e6e9ff;
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .upload-text {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .file-info {
+      color: #999;
+      font-size: 12px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .settings {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .settings h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+
+    .setting-group {
+      margin-bottom: 15px;
+    }
+
+    .setting-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .setting-group label {
+      display: block;
+      color: #666;
+      margin-bottom: 5px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .setting-group select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+
+    .setting-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #666;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #d0d0d0;
+    }
+
+    .btn-secondary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .progress-container {
+      display: none;
+      margin-bottom: 20px;
+    }
+
+    .progress-container.active {
+      display: block;
+    }
+
+    .progress-bar {
+      height: 30px;
+      background: #e0e0e0;
+      border-radius: 15px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .status-text {
+      text-align: center;
+      margin-top: 10px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .result-container {
+      display: none;
+    }
+
+    .result-container.active {
+      display: block;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .image-box {
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #f8f9fa;
+    }
+
+    .image-box h4 {
+      padding: 10px;
+      background: #667eea;
+      color: white;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .image-box img {
+      width: 100%;
+      display: block;
+    }
+
+    .image-info {
+      padding: 10px;
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+    }
+
+    .error {
+      background: #fee;
+      border: 2px solid #fcc;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+      color: #c33;
+      display: none;
+    }
+
+    .error.active {
+      display: block;
+    }
+
+    .info-box {
+      background: #e7f3ff;
+      border: 2px solid #b3d9ff;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 20px;
+      color: #004085;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 600px) {
+      .comparison {
+        grid-template-columns: 1fr;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Web Upscaler</h1>
+    <p class="subtitle">使用 AI 在瀏覽器中放大圖片 (CDN 版本)</p>
+
+    <!-- 提示 -->
+    <div class="info-box">
+      <strong>✨ 此版本使用 CDN：</strong> 直接在瀏覽器中運行，無需構建工具。首次使用會下載模型到緩存。
+    </div>
+
+    <!-- 錯誤提示 -->
+    <div class="error" id="error"></div>
+
+    <!-- 上傳區域 -->
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📁</div>
+      <div class="upload-text">點擊或拖放圖片到這裡</div>
+      <div class="file-info">支持 JPG, PNG, WebP</div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <!-- 設置 -->
+    <div class="settings">
+      <h3>⚙️ 設置</h3>
+
+      <div class="setting-group">
+        <label for="modelType">模型類型</label>
+        <select id="modelType">
+          <optgroup label="Real-CUGAN (快速)">
+            <option value="realcugan" data-denoise="conservative">Real-CUGAN - Conservative (推薦)</option>
+            <option value="realcugan" data-denoise="no-denoise">Real-CUGAN - No Denoise</option>
+            <option value="realcugan" data-denoise="denoise1x">Real-CUGAN - Denoise 1x (僅 2x)</option>
+            <option value="realcugan" data-denoise="denoise2x">Real-CUGAN - Denoise 2x (僅 2x)</option>
+            <option value="realcugan" data-denoise="denoise3x">Real-CUGAN - Denoise 3x</option>
+          </optgroup>
+          <optgroup label="Real-ESRGAN (高質量)">
+            <option value="realesrgan" data-model="anime_fast">Real-ESRGAN - Anime Fast</option>
+            <option value="realesrgan" data-model="general_fast">Real-ESRGAN - General Fast</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <label for="scale">放大倍數</label>
+        <select id="scale">
+          <option value="2">2x</option>
+          <option value="4" selected>4x</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <label for="backend">運算後端</label>
+        <select id="backend">
+          <option value="webgpu">WebGPU (更快)</option>
+          <option value="webgl">WebGL (相容性更好)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 按鈕 -->
+    <div class="button-group">
+      <button class="btn-primary" id="processBtn" disabled>開始處理</button>
+      <button class="btn-secondary" id="downloadBtn" disabled>下載結果</button>
+    </div>
+
+    <!-- 進度條 -->
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill">0%</div>
+      </div>
+      <div class="status-text" id="statusText"></div>
+    </div>
+
+    <!-- 結果對比 -->
+    <div class="result-container" id="resultContainer">
+      <div class="comparison">
+        <div class="image-box">
+          <h4>原圖</h4>
+          <img id="originalImg" alt="原圖">
+          <div class="image-info" id="originalInfo"></div>
+        </div>
+        <div class="image-box">
+          <h4>放大後</h4>
+          <img id="upscaledImg" alt="放大後">
+          <div class="image-info" id="upscaledInfo"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 載入 TensorFlow.js 從 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.22.0/dist/tf-backend-webgpu.min.js"></script>
+
+  <!-- 載入 Upscaler 核心類 -->
+  <script src="./upscaler.js"></script>
+
+  <!-- 載入 UI 應用 -->
+  <script src="./app-standalone.js"></script>
+</body>
+</html>

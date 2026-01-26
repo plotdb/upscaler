@@ -1,0 +1,7 @@
+.*.swp
+.swp
+node_modules
+.DS_Store
+web/static/assets/lib
+web/.view
+web/static

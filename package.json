@@ -10,11 +10,13 @@
   "license": "ISC",
   "description": "real-esrgan model wrapper with tf.js",
   "dependencies": {
+    "@loadingio/bootstrap.ext": "^0.0.12",
     "@loadingio/debounce.js": "^1.0.1",
     "@loadingio/ldquery": "^3.0.6",
     "@tensorflow/tfjs": "^4.22.0",
     "@tensorflow/tfjs-backend-webgpu": "^4.22.0",
     "@zbryikt/template": "^2.4.1",
+    "bootstrap": "^4.6.1",
     "fedep": "^1.6.0",
     "ldcover": "^3.5.6",
     "ldfile": "^2.0.1",
@@ -24,10 +26,12 @@
   "frontendDependencies": {
     "root": "web/static/assets/lib",
     "modules": [
+      "@loadingio/bootstrap.ext",
       "@loadingio/debounce.js",
       "@loadingio/ldquery",
       "@tensorflow/tfjs",
       "@tensorflow/tfjs-backend-webgpu",
+      "bootstrap",
       "ldcover",
       "ldfile",
       "ldview",

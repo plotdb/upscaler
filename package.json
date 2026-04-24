@@ -1,10 +1,14 @@
 {
   "name": "@plotdb/upscaler",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/node.js",
+  "browser": "src/upscaler.js",
   "scripts": {
     "start": "npx server -r web -o true"
   },
+  "files": [
+    "src/**/*"
+  ],
   "keywords": [],
   "author": "",
   "license": "ISC",

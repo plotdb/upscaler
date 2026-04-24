@@ -2,12 +2,13 @@
   "name": "@plotdb/upscaler",
   "version": "1.0.0",
   "main": "src/node.js",
-  "browser": "src/upscaler.js",
+  "browser": "dist/index.min.js",
   "scripts": {
     "start": "npx server -r web -o true"
   },
   "files": [
-    "src/**/*"
+    "dist/**/*",
+    "models/**/*"
   ],
   "keywords": [],
   "author": "",

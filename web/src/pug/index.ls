@@ -17,7 +17,7 @@ upscale-image = ({file, url}) ->
   <- p.then _
 
   # Here is the core upscale logic: create an upscaler, call with blob(file), return blob(ret)
-  upscale = new WebUpscaler scale: 2
+  upscale = new WebUpscaler scale: 2, sharpen: 0.2
   (ret) <- upscale.upscale file, {format: \jpg, progress: (->console.log it)} .then _
 
   img = new Image!

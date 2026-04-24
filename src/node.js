@@ -6,7 +6,7 @@ const path = require('path');
 global.tf = tf;
 global.ImageData = ImageData;
 
-const WebUpscaler = require('./upscaler.js');
+const WebUpscaler = require('./index.js');
 
 class NodeUpscaler extends WebUpscaler {
   constructor(options = {}) {

@@ -25,9 +25,15 @@ class WebUpscaler {
     this.overlap = options.overlap || 12;
     this.denoise = options.denoise || 'conservative';
     this.model = options.model || 'anime_plus';
+    this.sharpen = options.sharpen || 0;
+    this.debug = options.debug || false;
 
     this.loadedModel = null;
     this.ready = false;
+  }
+
+  _log(...args) {
+    if (this.debug) console.log(...args);
   }
 
   /**
@@ -39,13 +45,12 @@ class WebUpscaler {
 
     // 設置後端
     await tf.setBackend(this.backend);
-    console.log(`使用後端: ${tf.getBackend()}`);
+    this._log('backend:', tf.getBackend());
 
-    // 載入模型
     this.loadedModel = await this._loadModel();
     this.ready = true;
 
-    console.log('模型已準備好');
+    this._log('model ready');
   }
 
   /**
@@ -92,7 +97,7 @@ class WebUpscaler {
       this.loadedModel.dispose();
       this.loadedModel = null;
       this.ready = false;
-      console.log('模型已釋放');
+      this._log('model disposed');
     }
   }
 
@@ -116,25 +121,25 @@ class WebUpscaler {
       modelName = `realcugan-${this.scale}x-${this.denoise}-${this.tileSize}`;
     }
 
-    console.log('載入模型:', modelUrl);
+    this._log('loading model:', modelUrl);
 
-    // 嘗試從緩存載入
+    // try loading from cache
     try {
       const model = await tf.loadGraphModel(`indexeddb://${modelName}`);
-      console.log('從緩存載入成功');
+      this._log('model loaded from cache');
       return model;
     } catch (error) {
-      console.log('緩存中沒有模型，從網路下載...');
+      this._log('no cache, loading from network...');
     }
 
-    // 從網路載入並緩存
+    // load from network and cache
     const model = await tf.loadGraphModel(modelUrl);
 
     try {
       await model.save(`indexeddb://${modelName}`);
-      console.log('模型已緩存');
+      this._log('model cached');
     } catch (error) {
-      console.warn('緩存模型失敗:', error);
+      if (this.debug) console.warn('failed to cache model:', error);
     }
 
     return model;
@@ -166,7 +171,12 @@ class WebUpscaler {
         const tile = this._extractTile(imageData, x, y, this.tileSize, this.tileSize);
 
         // 處理 tile
-        const outputTensor = this._processTile(tile, model);
+        let outputTensor = this._processTile(tile, model);
+        if (this.sharpen > 0) {
+          const sharpened = this._sharpenTensor(outputTensor, this.sharpen);
+          outputTensor.dispose();
+          outputTensor = sharpened;
+        }
         const processedTile = this._tensorToImageData(outputTensor);
         outputTensor.dispose();
 
@@ -204,6 +214,25 @@ class WebUpscaler {
 
       const output = model.predict(tensor);
       return output;
+    });
+  }
+
+  /**
+   * 對 tensor 套用 sharpening kernel，strength 0-1 控制混合強度
+   * @private
+   */
+  _sharpenTensor(tensor, strength) {
+    return tf.tidy(() => {
+      // depthwiseConv2d kernel shape: [filterH, filterW, inChannels, channelMultiplier]
+      // 同一個 laplacian sharpen kernel 套用到每個 channel
+      const k = [
+         0,  0,  0,  -1, -1, -1,  0,  0,  0,
+        -1, -1, -1,   5,  5,  5, -1, -1, -1,
+         0,  0,  0,  -1, -1, -1,  0,  0,  0
+      ];
+      const kernel = tf.tensor4d(k, [3, 3, 3, 1]);
+      const sharpened = tf.depthwiseConv2d(tensor, kernel, 1, 'same').clipByValue(0, 1);
+      return tf.add(tensor.mul(1 - strength), sharpened.mul(strength));
     });
   }
 
@@ -386,4 +415,8 @@ class WebUpscaler {
       canvas.toBlob(resolve, `image/${format}`, quality);
     });
   }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = WebUpscaler;
 }

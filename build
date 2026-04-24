@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+rm -rf dist
+mkdir -p dist
+cp src/index.js dist/index.js
+./node_modules/.bin/uglifyjs src/index.js -m -c > dist/index.min.js
+rm -rf "web/static/assets/lib/@plotdb/upscaler"
+mkdir -p "web/static/assets/lib/@plotdb/upscaler"
+cp -R dist "web/static/assets/lib/@plotdb/upscaler/main"

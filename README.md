@@ -7,6 +7,8 @@ Reference:
  - https://github.com/xororz/web-realesrgan
  - https://upscale.chino.icu/
 
+for usage, check `usage.md`.
+
 
 ## License
 

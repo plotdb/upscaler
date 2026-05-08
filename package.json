@@ -1,7 +1,7 @@
 {
   "name": "@plotdb/upscaler",
   "version": "0.0.1",
-  "main": "src/node.js",
+  "main": "dist/node.js",
   "browser": "dist/index.min.js",
   "scripts": {
     "start": "npx server -r web -o true"

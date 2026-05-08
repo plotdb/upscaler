@@ -2,6 +2,7 @@
 rm -rf dist
 mkdir -p dist
 cp src/index.js dist/index.js
+cp src/node.js dist/node.js
 ./node_modules/.bin/uglifyjs src/index.js -m -c > dist/index.min.js
 rm -rf "web/static/assets/lib/@plotdb/upscaler"
 mkdir -p "web/static/assets/lib/@plotdb/upscaler"

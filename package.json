@@ -1,6 +1,6 @@
 {
   "name": "@plotdb/upscaler",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "main": "dist/node.js",
   "browser": "dist/index.min.js",
   "scripts": {

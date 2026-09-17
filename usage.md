@@ -217,10 +217,51 @@ Node.js 版本透過 `@plotdb/upscaler/node` 引入，介面與瀏覽器版相�
     })
 
 
+## ImageData 進、ImageData 出
+
+來源已經是 `ImageData`（canvas、影片抽格、上一段流程的輸出），而下一步也吃 `ImageData` 時，
+用 `upscaleImageData()` 可以省掉 `upscale()` 進出各一次的圖片編解碼：
+
+    var out = await upscaler.upscaleImageData(imageData, {
+      onProgress: function(p) {}
+    });
+    // out 是放大後的 ImageData
+
+這條路徑不碰 DOM。
+
+
+## 在 Web Worker 裡跑
+
+放大一張圖要好幾秒，跑在主執行緒上整頁都會卡住，建議放進 worker：
+
+    // upscale-worker.js
+    importScripts(
+      '/assets/lib/@tensorflow/tfjs/main/dist/tf.min.js',
+      '/assets/lib/@tensorflow/tfjs-backend-webgpu/main/dist/tf-backend-webgpu.min.js',
+      '/assets/lib/@plotdb/upscaler/main/index.min.js'
+    );
+
+    var upscaler = new WebUpscaler({
+      modelType: 'realcugan', scale: 2, backend: 'webgpu',
+      modelBaseUrl: '/assets/lib/@plotdb/upscaler/main/models'
+    });
+    var ready = upscaler.warmup();
+
+    self.onmessage = function(e) {
+      ready
+        .then(function() { return upscaler.upscaleImageData(e.data.imageData); })
+        // ImageData 的 buffer 用 transfer 交還，不複製
+        .then(function(out) { self.postMessage({imageData: out}, [out.data.buffer]); });
+    };
+
+worker 裡沒有 `document`，blob 相關的轉換會自動改走 `createImageBitmap` / `OffscreenCanvas`，
+所以 `upscale()`（吃 Blob）在 worker 裡一樣可用。
+
+
 ## 注意事項
 
  - 模型快取：首次使用會下載模型並存入 IndexedDB，後續從快取讀取。
- - WebGPU 需求：需要 Chrome/Edge 113+，且必須在 HTTPS 或 localhost 下運行。
+ - WebGPU 需求：需要 Chrome/Edge 113+，且必須在 HTTPS 或 localhost 下運行。worker 裡一樣可用。
  - 記憶體釋放：處理完成後呼叫 `upscaler.dispose()` 釋放 GPU 記憶體。
  - 大圖 OOM：若遇到記憶體不足，將 `tileSize` 縮小（如改為 32）。
  - Node.js 限制：`@plotdb/upscaler` 為純瀏覽器版，Node.js 需自行 polyfill 並使用 `@tensorflow/tfjs-node`。

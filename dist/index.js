@@ -63,30 +63,34 @@ class WebUpscaler {
    * @returns {Promise<Blob>} - 放大後的圖片 blob
    */
   async upscale(inputBlob, options = {}) {
+    const imageData = await this._blobToImageData(inputBlob);
+    const out = await this.upscaleImageData(imageData, options);
+    return this._imageDataToBlob(out, options.format || 'png', options.quality || 0.92);
+  }
+
+  /**
+   * 放大 ImageData
+   *
+   * 呼叫端手上已經有 ImageData 時 ( canvas / 影片抽格 / 前一段流程的輸出 ) 走這支,
+   * 可以省掉 upscale() 進出各一次的圖片編解碼. 這條路徑不碰 DOM, 在 Web Worker 裡也能跑.
+   *
+   * @param {ImageData} imageData - 輸入
+   * @param {Object} options - 選項
+   * @param {Function} options.onProgress - 進度回調 (0-100)
+   * @returns {Promise<ImageData>} - 放大後的 ImageData
+   */
+  async upscaleImageData(imageData, options = {}) {
     // 確保模型已載入
     if (!this.ready) {
       await this.warmup();
     }
 
-    const format = options.format || 'png';
-    const quality = options.quality || 0.92;
-    const onProgress = options.onProgress || (() => {});
-
-    // 1. Blob 轉 ImageData
-    const imageData = await this._blobToImageData(inputBlob);
-
-    // 2. 處理圖片
-    const upscaledImageData = await this._upscaleImageData(
+    return this._upscaleImageData(
       imageData,
       this.loadedModel,
       this.scale,
-      onProgress
+      options.onProgress || (() => {})
     );
-
-    // 3. ImageData 轉 Blob
-    const outputBlob = await this._imageDataToBlob(upscaledImageData, format, quality);
-
-    return outputBlob;
   }
 
   /**
@@ -373,6 +377,16 @@ class WebUpscaler {
    * @private
    */
   async _blobToImageData(blob) {
+    // Web Worker 裡沒有 document, 改用 createImageBitmap + OffscreenCanvas
+    if (typeof document === 'undefined') {
+      const bmp = await createImageBitmap(blob);
+      const canvas = new OffscreenCanvas(bmp.width, bmp.height);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bmp, 0, 0);
+      bmp.close();
+      return ctx.getImageData(0, 0, canvas.width, canvas.height);
+    }
+
     return new Promise((resolve, reject) => {
       const img = document.createElement('img');
       const url = URL.createObjectURL(blob);
@@ -404,6 +418,12 @@ class WebUpscaler {
    * @private
    */
   async _imageDataToBlob(imageData, format = 'png', quality = 0.92) {
+    if (typeof document === 'undefined') {
+      const c = new OffscreenCanvas(imageData.width, imageData.height);
+      c.getContext('2d').putImageData(imageData, 0, 0);
+      return c.convertToBlob({ type: `image/${format}`, quality });
+    }
+
     const canvas = document.createElement('canvas');
     canvas.width = imageData.width;
     canvas.height = imageData.height;

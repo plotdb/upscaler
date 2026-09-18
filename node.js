@@ -1,3 +1,12 @@
+// Polyfill for util.isNullOrUndefined (removed in Node.js 22+)
+// Required by @tensorflow/tfjs-node which still uses this deprecated function
+const util = require('util');
+if (typeof util.isNullOrUndefined !== 'function') {
+  util.isNullOrUndefined = function(arg) {
+    return arg === null || arg === undefined;
+  };
+}
+
 const tf = require('@tensorflow/tfjs-node');
 const { createCanvas, loadImage, ImageData } = require('canvas');
 const path = require('path');

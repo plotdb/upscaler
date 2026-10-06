@@ -14,7 +14,7 @@ class WebUpscaler {
    * @param {number} options.tileSize - Tile 大小 (預設 64)
    * @param {number} options.overlap - Overlap 大小 (預設 12)
    * @param {string} options.denoise - Real-CUGAN 降噪級別 (預設 'conservative')
-   * @param {string} options.model - Real-ESRGAN 模型名稱 (預設 'anime_plus')
+   * @param {string} options.model - Real-ESRGAN 模型名稱 (預設 'anime_fast')
    */
   constructor(options = {}) {
     this.modelType = options.modelType || 'realcugan';
@@ -24,7 +24,7 @@ class WebUpscaler {
     this.tileSize = options.tileSize || 64;
     this.overlap = options.overlap || 12;
     this.denoise = options.denoise || 'conservative';
-    this.model = options.model || 'anime_plus';
+    this.model = options.model || 'anime_fast';
     this.sharpen = options.sharpen || 0;
     this.debug = options.debug || false;
 

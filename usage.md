@@ -6,7 +6,7 @@
 支援兩種模型類型：
 
  - `realcugan`：Real-CUGAN，支援 2x / 4x 放大，快速，適合動漫，模型小（約 3MB）
- - `realesrgan`：Real-ESRGAN，支援 4x 放大，高品質，適合照片與動漫，模型較大（約 9-34MB）
+ - `realesrgan`：Real-ESRGAN，支援 4x 放大，適合照片與動漫，目前附的 fast 版模型約 1-3MB
 
 Real-CUGAN `denoise` 選項：
 
@@ -19,9 +19,9 @@ Real-CUGAN `denoise` 選項：
 Real-ESRGAN `model` 選項：
 
  - `anime_fast`：動漫快速版
- - `anime_plus`：動漫高品質版
+ - `anime_plus`：動漫高品質版（目前未附，見 `models/README.md`）
  - `general_fast`：通用快速版
- - `general_plus`：通用高品質版
+ - `general_plus`：通用高品質版（目前未附，見 `models/README.md`）
 
 
 ## 安裝
@@ -121,11 +121,11 @@ HTML 結構：
     });
 
 
-### Real-ESRGAN 高品質模式
+### Real-ESRGAN
 
     var upscaler = new WebUpscaler({
       modelType: 'realesrgan',
-      model: 'general_plus', // anime_fast | anime_plus | general_fast | general_plus
+      model: 'general_fast', // anime_fast | general_fast；高品質的 anime_plus / general_plus 目前未附，見 models/README.md
       scale: 4,
       backend: 'webgpu',
       modelBaseUrl: '/models'
@@ -205,7 +205,7 @@ Node.js 版本透過 `@plotdb/upscaler/node` 引入，介面與瀏覽器版相�
       tileSize: 64,            // tile 大小，預設 64；記憶體不足時可調小
       overlap: 12,             // tile overlap，預設 12
       denoise: 'conservative', // 僅 realcugan：conservative | no-denoise | denoise1x | denoise2x | denoise3x
-      model: 'anime_plus',     // 僅 realesrgan：anime_fast | anime_plus | general_fast | general_plus
+      model: 'anime_fast',     // 僅 realesrgan：anime_fast | general_fast（anime_plus / general_plus 目前未附）
     })
 
 `upscale()` 選項：

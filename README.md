@@ -21,6 +21,6 @@ Real-ESRGAN:
  - BSD 3-Clause License
 
 Converted models:
- - converted from Pytorch to tf.js (bin) by xororz
- - https://github.com/xororz/web-realesrgan
- - GPL License
+ - converted by ourselves from the official PyTorch weights to tf.js, with scripts in `tools/convert/`
+ - the converted models keep the license of the original weights ( see `models/README.md`, `models/realesrgan/LICENSE`, `models/realcugan/LICENSE` )
+ - Real-ESRGAN `general_plus` / `anime_plus` are not shipped for now; see `models/README.md` for how to convert them

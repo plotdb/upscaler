@@ -1,3 +1,9 @@
+// Node.js build of WebUpscaler.
+//
+// Same interface as the browser version, except that `upscale()` takes a file
+// path or a Buffer and resolves to a Buffer. Implemented purely through the
+// documented hooks: decode / encode / loadModel.
+
 // Polyfill for util.isNullOrUndefined (removed in Node.js 22+)
 // Required by @tensorflow/tfjs-node which still uses this deprecated function
 const util = require('util');
@@ -17,15 +23,16 @@ global.ImageData = ImageData;
 
 const WebUpscaler = require('./index.js');
 
+const MIMES = { png: 'image/png', jpeg: 'image/jpeg', jpg: 'image/jpeg', webp: 'image/webp' };
+
 class NodeUpscaler extends WebUpscaler {
   constructor(options = {}) {
-    super(options);
-    // Node.js uses the native tfjs-node backend; webgl/webgpu are not available
-    this.backend = 'tensorflow';
+    // tfjs-node runs on the native backend; webgl / webgpu don't exist here
+    super(Object.assign({}, options, { backend: options.backend || 'tensorflow' }));
   }
 
-  // Override: accept file path or Buffer instead of Blob
-  _blobToImageData(input) {
+  // Hook: accept a file path or a Buffer instead of a Blob
+  decode(input) {
     return loadImage(input).then(function(img) {
       var canvas = createCanvas(img.width, img.height);
       var ctx = canvas.getContext('2d');
@@ -34,29 +41,19 @@ class NodeUpscaler extends WebUpscaler {
     });
   }
 
-  // Override: return Buffer instead of Blob
-  _imageDataToBlob(imageData, format, quality) {
-    format = format || 'png';
-    quality = quality || 0.92;
+  // Hook: return a Buffer instead of a Blob
+  encode(imageData, format, quality) {
     var canvas = createCanvas(imageData.width, imageData.height);
-    var ctx = canvas.getContext('2d');
-    ctx.putImageData(imageData, 0, 0);
-    var mime = format === 'jpeg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
-    return Promise.resolve(canvas.toBuffer(mime, { quality: quality }));
+    canvas.getContext('2d').putImageData(imageData, 0, 0);
+    var mime = MIMES[format] || MIMES.png;
+    return Promise.resolve(canvas.toBuffer(mime, { quality: quality === undefined ? 0.92 : quality }));
   }
 
-  // Override: skip IndexedDB cache, load model directly via file:// or http
-  _loadModel() {
-    var modelUrl;
-    if (this.modelType === 'realesrgan') {
-      modelUrl = this.modelBaseUrl + '/realesrgan/' + this.model + '-' + this.tileSize + '/model.json';
-    } else {
-      modelUrl = this.modelBaseUrl + '/realcugan/' + this.scale + 'x-' + this.denoise + '-' + this.tileSize + '/model.json';
-    }
-    if (!modelUrl.startsWith('http')) {
-      modelUrl = 'file://' + path.resolve(modelUrl);
-    }
-    return tf.loadGraphModel(modelUrl);
+  // Hook: no IndexedDB here -- load straight from disk ( or http )
+  loadModel(url) {
+    if (!/^[a-z]+:\/\//.test(url)) url = 'file://' + path.resolve(url);
+    this.log('loading model', url);
+    return tf.loadGraphModel(url);
   }
 }
 

@@ -23,7 +23,7 @@ function options(spec, base) {
 
 async function run(spec, base, image) {
   var up = new NodeUpscaler(options(spec, base));
-  var input = await up._blobToImageData(image);
+  var input = await up.decode(image);
   var t = Date.now();
   var out = await up.upscaleImageData(input);
   var ms = Date.now() - t;

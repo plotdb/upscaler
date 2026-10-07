@@ -44,7 +44,7 @@ Real-ESRGAN `model` 選項：
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <!-- 可選：WebGPU 後端（Chrome/Edge 113+） -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.22.0/dist/tf-backend-webgpu.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@plotdb/upscaler/dist/upscaler.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@plotdb/upscaler/dist/index.min.js"></script>
 
 
 ### 基本使用
@@ -193,6 +193,26 @@ Node.js 版本透過 `@plotdb/upscaler/node` 引入，介面與瀏覽器版相�
     });
 
 
+## 自訂輸入輸出與模型載入
+
+`WebUpscaler` 把跟環境有關的三件事放在三個可覆寫的 hook 上，其餘流程共用。
+`@plotdb/upscaler/node` 就是只覆寫這三個：
+
+| hook | 預設行為 | 回傳 |
+|---|---|---|
+| `decode(input)` | Blob 轉 ImageData（有 `document` 用 img + canvas，worker 用 `createImageBitmap` + `OffscreenCanvas`） | `Promise<ImageData>` |
+| `encode(imageData, format, quality)` | canvas 轉 Blob | `Promise<Blob>` |
+| `loadModel(url, cacheName)` | 先讀 IndexedDB，沒有才下載並寫回快取 | `Promise<GraphModel>` |
+
+例如要改成從自家 CDN 拿模型、不用 IndexedDB：
+
+    class MyUpscaler extends WebUpscaler {
+      loadModel(url) { return tf.loadGraphModel(url.replace('/models', 'https://cdn.example.com/models')); }
+    }
+
+其他像切塊、混合、進度、取消都在基底類別裡，覆寫 hook 不會影響它們。
+
+
 ## 配置選項速查
 
 `WebUpscaler` 建構子選項：
@@ -206,15 +226,53 @@ Node.js 版本透過 `@plotdb/upscaler/node` 引入，介面與瀏覽器版相�
       overlap: 12,             // tile overlap，預設 12
       denoise: 'conservative', // 僅 realcugan：conservative | no-denoise | denoise1x | denoise2x | denoise3x
       model: 'anime_fast',     // 僅 realesrgan：anime_fast | general_fast（anime_plus / general_plus 目前未附）
+      margin: 0,               // 混合前先丟棄每個 tile 邊緣幾個像素，需 margin * 2 <= overlap
+      sharpen: 0,              // 0-1，對模型輸出做 3x3 銳化後依此比例混合回去
+      debug: false,            // true 時把載入與處理進度印到 console
     })
+
+實際放大倍數由模型決定，不是由 `scale` 決定。`scale` 只用來挑 realcugan 的 2x / 4x 模型檔；
+realesrgan 固定 4x，所以 `new WebUpscaler({modelType: 'realesrgan', scale: 2})` 仍然會放大 4 倍
+（`debug: true` 時會警告）。載入後可以從 `upscaler.modelScale` 讀到實際倍數。
+
+選項給錯值（不存在的 `modelType` / `denoise` / `model`，或 realcugan 4x 配上只有 2x 的
+`denoise1x` / `denoise2x`）會在 `new` 的時候就丟出錯誤，不會等到載入模型時才 404。
 
 `upscale()` 選項：
 
     upscaler.upscale(input, {
       format: 'png',               // 'png' | 'jpeg' | 'webp'
       quality: 0.92,               // 0-1（jpeg/webp）
-      onProgress: function(p) {}   // 進度回調，p 為 0-100
+      onProgress: function(p) {},  // 進度回調，p 為 0-100
+      signal: abortController.signal  // 中途取消，見下
     })
+
+`upscaleImageData()` 吃同一組 `onProgress` 與 `signal`。
+
+
+## 中途取消
+
+`upscale()` 與 `upscaleImageData()` 都接受標準的 `AbortSignal`。每個 tile 處理完會檢查一次，
+取消時釋放已配置的 tensor，並以 `AbortError` reject：
+
+    var ac = new AbortController();
+    document.getElementById('cancel').onclick = function() { ac.abort(); };
+
+    upscaler.upscale(file, { signal: ac.signal })
+      .then(function(blob) { /* ... */ })
+      .catch(function(e) {
+        if (e.name === 'AbortError') console.log('已取消');
+        else throw e;
+      });
+
+
+## 透明度
+
+模型本身只吃 RGB，所以 alpha 通道是另外處理的：
+
+ - 輸入完全不透明時，輸出 alpha 全部是 255，不另外計算。
+ - 輸入有半透明或全透明的像素時，alpha 用雙線性內插放大同樣的倍數後放回輸出。
+ - 送進模型的 RGB 是原本的值，沒有預乘 alpha，所以全透明區域底下的顏色不會汙染鄰近像素。
 
 
 ## ImageData 進、ImageData 出
@@ -264,4 +322,5 @@ worker 裡沒有 `document`，blob 相關的轉換會自動改走 `createImageBi
  - WebGPU 需求：需要 Chrome/Edge 113+，且必須在 HTTPS 或 localhost 下運行。worker 裡一樣可用。
  - 記憶體釋放：處理完成後呼叫 `upscaler.dispose()` 釋放 GPU 記憶體。
  - 大圖 OOM：若遇到記憶體不足，將 `tileSize` 縮小（如改為 32）。
- - Node.js 限制：`@plotdb/upscaler` 為純瀏覽器版，Node.js 需自行 polyfill 並使用 `@tensorflow/tfjs-node`。
+ - 小圖：寬或高小於 `tileSize` 時會先用 edge replicate 補到一個 tile 的大小，輸出再裁回 `寬 * 倍數 x 高 * 倍數`，所以 1x1 這種極端尺寸也能跑。
+ - Node.js：用 `@plotdb/upscaler/node`（見上），它已經包好 `@tensorflow/tfjs-node` 與 `canvas`，不需要自己 polyfill。

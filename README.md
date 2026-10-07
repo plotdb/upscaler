@@ -1,13 +1,10 @@
 # @plotdb/upscaler
 
-a simple wrapper of web-based upscaler, based on web-realesrgan
+image upscaler with tf.js, running Real-ESRGAN / Real-CUGAN models converted from their official weights. works in browsers, Web Workers and Node.js.
 
-Reference:
+for usage, check `usage.md`. for model conversion, check `tools/convert/`.
 
- - https://github.com/xororz/web-realesrgan
- - https://upscale.chino.icu/
-
-for usage, check `usage.md`.
+History: versions up to 0.0.3 were based on xororz/web-realesrgan ( https://github.com/xororz/web-realesrgan , GPL ) for both code and converted models. models were replaced in 0.0.4 and the code was rewritten in 0.0.5; neither is derived from it anymore.
 
 
 ## License

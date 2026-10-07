@@ -1,3 +1,9 @@
+## v0.0.5
+
+ - 依賴整理: 原本的 dependencies 全部移到 devDependencies, 安裝時不再連帶安裝 tfjs-node / canvas / 範例頁套件; `@tensorflow/tfjs`、`@tensorflow/tfjs-node`、`canvas` 改列為 optional peerDependencies, 由使用端自行安裝
+ - IndexedDB 快取 key 加上 `plotdb-v1-` 前綴, 確保改用自行轉換的模型; 載入時順便移除舊 key 的快取
+
+
 ## v0.0.4
 
  - add `upscaleImageData()`: 直接吃 ImageData 回 ImageData, 省掉呼叫端不需要的圖片編解碼

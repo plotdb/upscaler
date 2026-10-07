@@ -127,6 +127,12 @@ class WebUpscaler {
 
     this._log('loading model:', modelUrl);
 
+    // 舊版快取 key 沒有前綴, 存的可能是 xororz 的 GPL 轉檔; 換成新 key 並清掉舊的.
+    // 模型檔變動時遞增 CACHE_PREFIX 的版本, 讓使用者重新下載.
+    const legacyName = modelName;
+    modelName = `${WebUpscaler.CACHE_PREFIX}-${modelName}`;
+    tf.io.removeModel(`indexeddb://${legacyName}`).catch(() => {});
+
     // try loading from cache
     try {
       const model = await tf.loadGraphModel(`indexeddb://${modelName}`);
@@ -436,6 +442,8 @@ class WebUpscaler {
     });
   }
 }
+
+WebUpscaler.CACHE_PREFIX = 'plotdb-v1';
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = WebUpscaler;
